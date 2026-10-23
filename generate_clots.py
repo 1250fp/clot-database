@@ -246,16 +246,19 @@ def run_slab(
                 eta = (config.duration_s - state.time_s) / max(
                     state.time_s / max(elapsed, 1e-9), 1e-9
                 )
-                print(
-                    f"\r  [{batch_done + 1:2d}/{batch_total:2d}] M={M} Clot {clot_index} "
+                prog_line = (
+                    f"[{batch_done + 1:2d}/{batch_total:2d}] M={M} Clot {clot_index} "
                     f"Slab {slab_index + 1}/{M} (seed {config.seed}) "
                     f"[{_bar(frac, 18)}] {100 * frac:5.1f}% | "
                     f"{state.time_s:5.0f}/{config.duration_s:.0f}s | "
                     f"wall {_fmt_time(elapsed)} (ETA {_fmt_time(eta)}) | "
-                    f"{rate:5.0f} st/s | links {len(state.cohesion_pairs):4d}",
-                    end="",
-                    flush=True,
+                    f"{rate:5.0f} st/s | links {len(state.cohesion_pairs):4d}"
                 )
+                print("\r  " + prog_line, end="", flush=True)
+                try:
+                    (slab_path.parent.parent / "progress.txt").write_text(prog_line + "\n", encoding="utf-8")
+                except OSError:
+                    pass
         print()
     finally:
         total_substeps = int(getattr(state, "cuda_noise_substep", state.step))
