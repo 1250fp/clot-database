@@ -1,0 +1,14 @@
+{
+  "database": "2-D Layered Platelet-Fibrin Clot Database",
+  "updated_local": "2026-10-23T12:57:00",
+  "domain_size_um": 48.0,
+  "Lz_um": 32.0,
+  "monomers_in_parallel_N": 1100.0,
+  "next_available_seed": 4018,
+  "seed_blocks": {
+    "M09_clot01": 4000,
+    "M06_clot01": 4009,
+    "M03_clot01": 4015
+  },
+  "clots": []
+}
