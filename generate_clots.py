@@ -274,6 +274,12 @@ def run_slab(
     for idx, frame in enumerate(filopodia_frames):
         padded_filo[idx, :, : frame.shape[1]] = frame
 
+    fiber_offsets = [0]
+    fiber_values: list[int] = []
+    for identities in state.node_fiber_ids:
+        fiber_values.extend(sorted(int(v) for v in identities))
+        fiber_offsets.append(len(fiber_values))
+
     tmp_path = slab_path.with_suffix(".tmp.npz")
     np.savez_compressed(
         tmp_path,
@@ -290,11 +296,12 @@ def run_slab(
         platelets_um=np.asarray(platelet_frames, dtype=np.float64),
         backbone_pairs=np.asarray(state.backbone_pairs, dtype=np.int32),
         backbone_L0_um=np.asarray(state.backbone_L0_um, dtype=np.float64),
-        node_fiber_id=np.asarray(state.node_fiber_id, dtype=np.int32),
+        node_fiber_id_offsets=np.asarray(fiber_offsets, dtype=np.int32),
+        node_fiber_ids_flat=np.asarray(fiber_values, dtype=np.int32),
         fixed_nodes=np.asarray(state.fixed_nodes, dtype=bool),
         bending_triples=np.asarray(state.bending_triples, dtype=np.int32),
         bending_phi0_rad=np.asarray(state.bending_phi0_rad, dtype=np.float64),
-        bending_dual_length_um=np.asarray(state.bending_dual_length_um, dtype=np.float64),
+        bending_dual_L0_um=np.asarray(state.bending_dual_L0_um, dtype=np.float64),
         cohesion_frame_offsets=offsets,
         cohesion_pairs_flat=pairs_flat,
         cohesion_L0_um_flat=refs_flat,
