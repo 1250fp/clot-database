@@ -205,23 +205,21 @@ def run_slab(
     frame_wall_s = [0.0]
     frame_substeps = [0]
 
-    next_output = config.output_interval_s
+    total_steps = int(round(config.duration_s / config.dt_s))
+    steps_per_frame = max(1, int(round(config.output_interval_s / config.dt_s)))
     last_print = time.perf_counter()
     gpu_start = time.perf_counter()
 
     try:
-        while state.time_s < config.duration_s - 1e-15:
-            interval = min(config.dt_s, config.duration_s - state.time_s)
-            integrate_interval_cuda(state, config, rng_unused, interval)
+        for step_i in range(1, total_steps + 1):
+            integrate_interval_cuda(state, config, rng_unused, config.dt_s)
             now = time.perf_counter()
             elapsed = now - gpu_start
 
-            should_store = state.time_s >= next_output - 1e-12 or math.isclose(
-                state.time_s, config.duration_s
-            )
+            should_store = step_i % steps_per_frame == 0 or step_i == total_steps
             if should_store:
                 substeps_now = int(getattr(state, "cuda_noise_substep", state.step))
-                frame_times.append(round(float(state.time_s), 6))
+                frame_times.append(round(step_i * config.dt_s, 6))
                 node_frames.append(state.nodes_um.copy())
                 platelet_frames.append(state.platelets_um.copy())
                 cohesion_frames.append(
@@ -236,8 +234,6 @@ def run_slab(
                 filopodia_frames.append(_filopodia_snapshot(state))
                 frame_wall_s.append(round(elapsed, 4))
                 frame_substeps.append(substeps_now)
-                while next_output <= state.time_s + 1e-12:
-                    next_output += config.output_interval_s
 
             if now - last_print >= 2.0 or should_store:
                 last_print = now
@@ -330,6 +326,25 @@ def run_slab(
     }
 
 
+RUN_PARAM_KEYS = ("duration_s", "frame_interval_s", "dt_s", "filopodia_f0_nN", "monomers_in_parallel_N")
+
+
+def _check_run_params(clot_dir: Path, args) -> None:
+    """Refuse to mix slabs made with different physics/time settings in one clot folder."""
+    meta_path = clot_dir / "clot.json"
+    if not meta_path.exists():
+        return
+    old = json.loads(meta_path.read_text(encoding="utf-8"))
+    new = {"duration_s": args.duration, "frame_interval_s": args.interval, "dt_s": 0.001,
+           "filopodia_f0_nN": args.f0, "monomers_in_parallel_N": 1100.0}
+    diff = {k: (old.get(k), v) for k, v in new.items() if old.get(k) is not None and not math.isclose(float(old[k]), float(v))}
+    if diff:
+        raise SystemExit(
+            f"{clot_dir.name} was generated with different settings {diff} (old, new). "
+            "Use a new --clot-index to get a fresh seed block."
+        )
+
+
 def load_existing_slab_info(slab_path: Path, slab_index: int, z_um: float) -> dict | None:
     if not slab_path.exists():
         return None
@@ -382,6 +397,7 @@ def main() -> int:
         seed_end = seed_start + M - 1
         clot_dir = db_dir / f"M{M:02d}_clot{args.clot_index:02d}_seeds{seed_start}_{seed_end}"
         clot_dir.mkdir(parents=True, exist_ok=True)
+        _check_run_params(clot_dir, args)
 
         base_cfg = make_slab_config(
             M,
@@ -446,6 +462,7 @@ def main() -> int:
                 "monomers_in_parallel_N": float(base_cfg.monomers_in_parallel_N),
                 "duration_s": float(args.duration),
                 "frame_interval_s": float(args.interval),
+                "dt_s": 0.001,
                 "seed_start": int(seed_start),
                 "seed_end": int(seed_end),
                 "hostname": socket.gethostname(),
@@ -472,6 +489,7 @@ def main() -> int:
             "monomers_in_parallel_N": float(base_cfg.monomers_in_parallel_N),
             "duration_s": float(args.duration),
             "frame_interval_s": float(args.interval),
+            "dt_s": 0.001,
             "seed_start": int(seed_start),
             "seed_end": int(seed_end),
             "hostname": socket.gethostname(),
