@@ -53,7 +53,7 @@ def make_slab_config(
     duration_s: float = 300.0,
     frame_interval_s: float = 30.0,
     dt_s: float = 0.001,
-    f0_nN: float = 2.223,
+    f0_nN: float = 2.233,
 ) -> Program19Config:
     k_um = LZ_UM / float(M)
     area_um2 = math.pi * R_UM**2
@@ -374,7 +374,7 @@ def main() -> int:
     parser.add_argument("--clot-index", type=int, default=1, help="Clot replica index (default: 1)")
     parser.add_argument("--duration", type=float, default=300.0, help="Simulated time in s (default: 300)")
     parser.add_argument("--interval", type=float, default=30.0, help="Trajectory frame interval in s (default: 30)")
-    parser.add_argument("--f0", type=float, default=2.223, help="Filopodial baseline force in nN (default: 2.223)")
+    parser.add_argument("--f0", type=float, default=2.233, help="Filopodial baseline force in nN (default: 2.233)")
     args = parser.parse_args()
 
     root_dir = Path(__file__).resolve().parent
